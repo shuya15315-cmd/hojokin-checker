@@ -90,6 +90,26 @@ if ($code -eq 0) {
   Write-Log "=== 失敗またはエラー終了 (exit=$code)。上のログを確認してください ==="
 }
 
+# ---- GitHub へ自動反映（remote 'origin' が設定されている時だけ）----
+if ($code -eq 0 -and (Get-Command git -ErrorAction SilentlyContinue)) {
+  git -C $proj remote get-url origin 2>$null | Out-Null
+  if ($LASTEXITCODE -eq 0) {
+    git -C $proj add -A 2>&1 | Out-File -FilePath $log -Encoding utf8 -Append
+    git -C $proj diff --cached --quiet
+    if ($LASTEXITCODE -ne 0) {   # 変更あり
+      $cmsg = "auto update " + (Get-Date -Format "yyyy-MM-dd")
+      git -C $proj commit -m $cmsg 2>&1 | Out-File -FilePath $log -Encoding utf8 -Append
+      git -C $proj push 2>&1     | Out-File -FilePath $log -Encoding utf8 -Append
+      if ($LASTEXITCODE -eq 0) { Write-Log "GitHub へ push 完了（Teamsタブに自動反映されます）" }
+      else { Write-Log "【注意】git push に失敗。認証(PAT)・ネットワーク・upstream設定を確認してください" }
+    } else {
+      Write-Log "内容に変更なし。push はスキップしました。"
+    }
+  } else {
+    Write-Log "GitHub連携は未設定（remote origin なし）。ローカル更新のみ行いました。"
+  }
+}
+
 # ---- 古いログの掃除 ----
 Get-ChildItem $logDir -Filter "update_*.log" | Sort-Object LastWriteTime -Descending |
   Select-Object -Skip $keepLogs | Remove-Item -Force -ErrorAction SilentlyContinue
