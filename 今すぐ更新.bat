@@ -1,9 +1,9 @@
 @echo off
-rem === 補助金・税制改正チェッカー を今すぐ最新化する ===
-rem （普段は週1回自動で更新されます。すぐ最新にしたい時だけこれをダブルクリック）
+rem === Update the subsidy / tax checker now ===
+rem (Normally it auto-updates weekly. Double-click this only when you want it right now.)
 chcp 65001 >nul
-echo 最新の情報を集めています。数分かかります。ウィンドウは閉じずにお待ちください...
+echo Collecting the latest info. This takes a few minutes. Please keep this window open...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update.ps1"
 echo.
-echo 完了しました。index.html を開き直すと最新の内容が表示されます。
+echo Done. Reopen index.html to see the latest.
 pause
