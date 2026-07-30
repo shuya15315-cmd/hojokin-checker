@@ -1,0 +1,8 @@
+# 実行時に生成されるもの（公開・共有しない）
+logs/
+backups/
+
+# OS / エディタ
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>補助金・税制改正チェッカー</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --ink:#1c2430; --sub:#5b6675; --line:#e3e7ed;
+    --accent:#2563eb; --accent-weak:#e8f0ff;
+    --ok:#0e9f6e; --ok-bg:#e6f6ef; --warn:#d9770660; --warn-ink:#b45309; --warn-bg:#fff4e3;
+    --danger:#dc2626; --danger-bg:#fdecec; --muted:#6b7280; --muted-bg:#eef1f5;
+    --chip:#eef2f8; --shadow:0 1px 3px rgba(20,30,50,.06),0 1px 2px rgba(20,30,50,.04);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f141b; --panel:#161d27; --ink:#e7ecf3; --sub:#9aa6b6; --line:#26303d;
+      --accent:#5b9dff; --accent-weak:#17263f;
+      --ok:#34d399; --ok-bg:#0f2b22; --warn-ink:#f5b041; --warn-bg:#2b2312;
+      --danger:#f87171; --danger-bg:#331a1a; --muted:#9aa6b6; --muted-bg:#1e2732;
+      --chip:#1c2632; --shadow:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:20px 16px 80px}
+  header.top{display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 16px; margin-bottom:6px}
+  header.top h1{font-size:1.35rem; margin:0; letter-spacing:.02em}
+  .meta{color:var(--sub); font-size:.82rem}
+  .meta b{color:var(--ink)}
+  .note{
+    background:var(--warn-bg); color:var(--warn-ink); border:1px solid var(--warn);
+    border-radius:10px; padding:8px 12px; font-size:.82rem; margin:12px 0 18px;
+  }
+  .tabs{display:flex; gap:6px; margin:16px 0 14px; border-bottom:1px solid var(--line); flex-wrap:wrap}
+  .tab{
+    appearance:none; border:0; background:none; color:var(--sub); cursor:pointer;
+    padding:10px 14px; font-size:.98rem; font-weight:600; border-bottom:2px solid transparent;
+  }
+  .tab.active{color:var(--accent); border-bottom-color:var(--accent)}
+  .tab .cnt{font-size:.75rem; color:var(--muted); font-weight:600; margin-left:4px}
+  .controls{display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; margin-bottom:8px}
+  .search{
+    flex:1 1 220px; min-width:180px; padding:9px 12px; border:1px solid var(--line);
+    border-radius:9px; background:var(--panel); color:var(--ink); font-size:.9rem;
+  }
+  select{
+    padding:9px 10px; border:1px solid var(--line); border-radius:9px;
+    background:var(--panel); color:var(--ink); font-size:.86rem;
+  }
+  .filters{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 14px}
+  .fbtn{
+    appearance:none; cursor:pointer; border:1px solid var(--line); background:var(--panel);
+    color:var(--sub); border-radius:999px; padding:5px 12px; font-size:.82rem; font-weight:600;
+  }
+  .fbtn.on{background:var(--accent-weak); color:var(--accent); border-color:transparent}
+  /* 業種から探す */
+  .lead{font-size:.95rem; color:var(--sub); margin:4px 0 12px}
+  .bizgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:8px}
+  .biz{
+    appearance:none; cursor:pointer; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); border-radius:12px; padding:16px 12px; font-size:1rem; font-weight:700;
+    box-shadow:var(--shadow); text-align:center; transition:.12s;
+  }
+  .biz:hover{border-color:var(--accent)}
+  .biz.on{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .biz .emoji{display:block; font-size:1.5rem; margin-bottom:4px}
+  .resulthead{margin:20px 0 6px; font-size:1.1rem; font-weight:800}
+  .resulthead .hl{color:var(--accent)}
+  .grouplabel{margin:18px 0 8px; font-size:.9rem; font-weight:700; color:var(--sub); display:flex; align-items:center; gap:8px}
+  .grouplabel::before{content:""; width:4px; height:16px; background:var(--accent); border-radius:2px; display:inline-block}
+  .summary{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+  .stat{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:8px 14px; box-shadow:var(--shadow); font-size:.82rem; color:var(--sub);
+  }
+  .stat b{display:block; font-size:1.25rem; color:var(--ink); line-height:1.2}
+  .stat.clickable{cursor:pointer; transition:.12s; user-select:none}
+  .stat.clickable:hover{border-color:var(--accent)}
+  .stat.active{border-color:var(--accent); background:var(--accent-weak); color:var(--accent)}
+  .stat.active b{color:var(--accent)}
+  .grid{display:grid; grid-template-columns:1fr; gap:12px}
+  @media(min-width:720px){ .grid{grid-template-columns:1fr 1fr} }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px 16px 14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px;
+  }
+  .card h3{margin:0; font-size:1.02rem; line-height:1.4}
+  .row{display:flex; flex-wrap:wrap; align-items:center; gap:6px}
+  .badge{font-size:.72rem; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap}
+  .b-ok{background:var(--ok-bg); color:var(--ok)}
+  .b-soon{background:var(--warn-bg); color:var(--warn-ink)}
+  .b-end{background:var(--muted-bg); color:var(--muted)}
+  .b-wait{background:var(--accent-weak); color:var(--accent)}
+  .b-fit{background:var(--accent); color:#fff}
+  .b-new{background:var(--danger); color:#fff}
+  .b-all{background:var(--ok-bg); color:var(--ok)}
+  .b-imp-大{background:var(--danger-bg); color:var(--danger)}
+  .b-imp-中{background:var(--warn-bg); color:var(--warn-ink)}
+  .b-imp-小{background:var(--muted-bg); color:var(--muted)}
+  .tag{font-size:.72rem; background:var(--chip); color:var(--sub); padding:3px 9px; border-radius:6px}
+  .org{color:var(--sub); font-size:.82rem}
+  .desc{font-size:.9rem}
+  .kv{font-size:.84rem; display:grid; grid-template-columns:auto 1fr; gap:2px 10px}
+  .kv dt{color:var(--sub); white-space:nowrap}
+  .kv dd{margin:0}
+  ul.req{margin:2px 0 0; padding-left:1.1em; font-size:.84rem}
+  ul.req li{margin:1px 0}
+  .deadline{font-weight:700}
+  .deadline.soon{color:var(--warn-ink)}
+  .deadline.end{color:var(--muted)}
+  .src{font-size:.8rem; display:flex; flex-wrap:wrap; gap:8px; margin-top:2px}
+  .src a{color:var(--accent); text-decoration:none}
+  .src a:hover{text-decoration:underline}
+  .foot{color:var(--muted); font-size:.74rem; margin-top:2px}
+  .empty{color:var(--sub); text-align:center; padding:40px 0}
+  .req-uncertain{color:var(--warn-ink)}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>📋 補助金・税制改正チェッカー</h1>
+    <span class="meta">最終更新: <b id="lastUpdate">—</b> ／ 次回更新予定: <b id="nextUpdate">—</b></span>
+  </header>
+  <div class="note" id="note"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="osusume" onclick="switchTab('osusume')">🎯 業種から探す</button>
+    <button class="tab" data-tab="hojokin" onclick="switchTab('hojokin')">📋 補助金一覧 <span class="cnt" id="cntH"></span></button>
+    <button class="tab" data-tab="zeisei" onclick="switchTab('zeisei')">🧾 税制改正 <span class="cnt" id="cntZ"></span></button>
+    <button class="tab" data-tab="shinchaku" onclick="switchTab('shinchaku')">🆕 新着 <span class="cnt" id="cntNew"></span></button>
+  </div>
+
+  <!-- ============ 業種から探す（おすすめ）============ -->
+  <section id="tab-osusume">
+    <p class="lead">あなたの業種・業態を選ぶと、<b>使える可能性がある補助金・制度</b>をまとめて表示します。</p>
+    <div class="bizgrid" id="bizGrid"></div>
+    <div id="osusumeResult"></div>
+    <div class="empty" id="osusumeHint">↑ まず業種を選んでください。</div>
+  </section>
+
+  <!-- ============ 補助金一覧 ============ -->
+  <section id="tab-hojokin" class="hidden">
+    <div class="controls">
+      <input class="search" id="searchH" type="search" placeholder="キーワード検索（名称・概要・要件）" oninput="renderH()">
+      <select id="sortH" onchange="renderH()">
+        <option value="deadline">締切が近い順</option>
+        <option value="new">新しく取得した順</option>
+        <option value="name">名称順</option>
+      </select>
+    </div>
+    <div class="filters" id="tagFiltersH"></div>
+    <div class="filters" id="statusFiltersH"></div>
+    <div class="summary" id="summaryH"></div>
+    <div class="grid" id="listH"></div>
+    <div class="empty hidden" id="emptyH">条件に合う補助金がありません。フィルタを調整してください。</div>
+  </section>
+
+  <!-- ============ 税制改正 ============ -->
+  <section id="tab-zeisei" class="hidden">
+    <div class="controls">
+      <input class="search" id="searchZ" type="search" placeholder="キーワード検索（制度名・概要・要点）" oninput="renderZ()">
+      <select id="yearZ" onchange="renderZ()"><option value="">全年度</option></select>
+      <select id="kubunZ" onchange="renderZ()"><option value="">全区分</option></select>
+      <select id="impZ" onchange="renderZ()">
+        <option value="">影響度すべて</option><option value="大">影響度：大</option>
+        <option value="中">影響度：中</option><option value="小">影響度：小</option>
+      </select>
+    </div>
+    <div class="filters" id="tagFiltersZ"></div>
+    <div class="grid" id="listZ"></div>
+    <div class="empty hidden" id="emptyZ">条件に合う項目がありません。フィルタを調整してください。</div>
+  </section>
+
+  <!-- ============ 新着（今回の更新で追加）============ -->
+  <section id="tab-shinchaku" class="hidden">
+    <p class="lead" id="shinchakuLead"></p>
+    <div id="shinchakuBody"></div>
+  </section>
+
+</div>
+
+<script src="data.js"></script>
+<script>
+/* ---------- 共通 ---------- */
+const 補助金 = Array.isArray(window.補助金データ) ? window.補助金データ : [];
+const 税制 = Array.isArray(window.税制改正データ) ? window.税制改正データ : [];
+const メタ = window.メタ || {};
+const 業種一覧 = ["中小企業全般","金融・投資・創業","不動産・建設","介護・福祉・見守り"];
+
+const today = new Date(); today.setHours(0,0,0,0);
+function parseDate(s){ if(!s) return null; const d=new Date(s); return isNaN(d)?null:d; }
+function daysUntil(s){ const d=parseDate(s); if(!d) return null; return Math.round((d-today)/86400000); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+function isUncertain(s){ return /要確認|未定|—/.test(String(s||"")); }
+/* 今回の更新で追加されたか（追加日が前回更新日より後）*/
+function isNew(item){
+  const added = item.追加日, prev = メタ.前回更新;
+  if(!added || !prev) return false;
+  return String(added) > String(prev);
+}
+
+function statusOf(item){
+  const s = item.ステータス||"";
+  const d = daysUntil(item.締切日);
+  if(d!==null && d<0) return "終了";              // 締切を過ぎたら終了（最優先）
+  if(/終了/.test(s)) return "終了";
+  if(/準備|公募待ち/.test(s)) return "準備中";     // 受付前は締切日があっても「準備中」
+  if(d===null) return "通年など";
+  if(d<=30) return "締切間近";
+  return "募集中";
+}
+const statusBadge = {
+  "募集中":["b-ok","募集中"], "締切間近":["b-soon","締切間近"], "終了":["b-end","終了"],
+  "準備中":["b-wait","準備中(公募待ち)"], "通年など":["b-ok","通年・随時"]
+};
+function deadlineHtml(it){
+  const d=daysUntil(it.締切日);
+  if(d===null) return "";
+  if(d<0) return `<span class="deadline end">締切終了</span>`;
+  if(d===0) return `<span class="deadline soon">本日締切</span>`;
+  if(d<=30) return `<span class="deadline soon">あと${d}日</span>`;
+  return `<span class="deadline">あと${d}日</span>`;
+}
+function deadlineSortKey(it){ const d=daysUntil(it.締切日); return (d==null)?1e8:(d<0?1e7-d:d); }
+
+/* ---------- タブ切替 ---------- */
+function switchTab(name){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));
+  ["osusume","hojokin","zeisei","shinchaku"].forEach(n=>
+    document.getElementById("tab-"+n).classList.toggle("hidden", n!==name));
+}
+
+/* ---------- 補助金カード ---------- */
+function cardH(it, relevance){
+  const st=statusOf(it); const [cls,label]=statusBadge[st]||["b-end",st];
+  let relBadge="";
+  if(relevance==="fit") relBadge=`<span class="badge b-fit">あなたの業種向け</span>`;
+  else if(relevance==="all") relBadge=`<span class="badge b-all">全業種で利用可</span>`;
+  const tags=(it.業種タグ||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+  const reqs=(it["対象・要件"]||[]).map(r=>`<li class="${isUncertain(r)?'req-uncertain':''}">${esc(r)}</li>`).join("");
+  const src=(it.出典||[]).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">🔗 ${esc(s.タイトル||"公式ページ")}</a>`).join("");
+  const val=v=>`<span class="${isUncertain(v)?'req-uncertain':''}">${esc(v||"—")}</span>`;
+  const el=document.createElement("div"); el.className="card";
+  el.innerHTML=`
+    <div class="row">${isNew(it)?'<span class="badge b-new">🆕 新着</span>':''}${relBadge}<span class="badge ${cls}">${label}</span>${deadlineHtml(it)}${tags}</div>
+    <h3>${esc(it.名称)}</h3>
+    <div class="org">${esc(it.実施機関||"")}</div>
+    <div class="desc">${esc(it.概要||"")}</div>
+    <dl class="kv">
+      <dt>補助額</dt><dd>${val(it.補助額)}</dd>
+      <dt>補助率</dt><dd>${val(it.補助率)}</dd>
+      <dt>公募期間</dt><dd>${val(it.公募期間)}</dd>
+    </dl>
+    ${reqs?`<div><div class="org">対象・要件</div><ul class="req">${reqs}</ul></div>`:""}
+    ${it.備考?`<div class="foot">📝 ${esc(it.備考)}</div>`:""}
+    <div class="src">${src}</div>
+    <div class="foot">取得日: ${esc(it.取得日||"—")}</div>`;
+  return el;
+}
+
+/* ---------- 税制カード ---------- */
+function cardZ(it){
+  const points=(it.要点||[]).map(p=>`<li class="${isUncertain(p)?'req-uncertain':''}">${esc(String(p).replace(/^[・\-]\s*/,""))}</li>`).join("");
+  const tags=(it["対象業種・対象者"]||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+  const src=(it.出典||[]).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">🔗 ${esc(s.タイトル||"公式ページ")}</a>`).join("");
+  const imp=it.影響度||""; const impCls=({"大":"b-imp-大","中":"b-imp-中","小":"b-imp-小"})[imp]||"b-end";
+  const el=document.createElement("div"); el.className="card";
+  el.innerHTML=`
+    <div class="row">
+      ${isNew(it)?'<span class="badge b-new">🆕 新着</span>':''}
+      <span class="badge b-wait">${esc(it.区分||"")}</span>
+      ${imp?`<span class="badge ${impCls}">影響度 ${esc(imp)}</span>`:""}
+      <span class="tag">${esc(it.改正年度||"")}</span>
+    </div>
+    <h3>${esc(it.制度名)}</h3>
+    <div class="desc">${esc(it.概要||"")}</div>
+    ${points?`<div><div class="org">要点</div><ul class="req">${points}</ul></div>`:""}
+    <dl class="kv"><dt>適用時期</dt><dd class="${isUncertain(it.適用時期)?'req-uncertain':''}">${esc(it.適用時期||"—")}</dd></dl>
+    <div class="row">${tags}</div>
+    ${it.備考?`<div class="foot">📝 ${esc(it.備考)}</div>`:""}
+    <div class="src">${src}</div>
+    <div class="foot">取得日: ${esc(it.取得日||"—")}</div>`;
+  return el;
+}
+
+/* ================= 業種から探す ================= */
+const 業態一覧 = [
+  {key:"kaigo",  label:"介護・福祉",       emoji:"🧑‍⚕️", tags:["介護・福祉・見守り"]},
+  {key:"fudosan",label:"不動産・建設",     emoji:"🏢",   tags:["不動産・建設"]},
+  {key:"kinyu",  label:"金融・投資・士業", emoji:"💹",   tags:["金融・投資・創業"]},
+  {key:"sogyo",  label:"創業・これから開業", emoji:"🚀", tags:["金融・投資・創業"]},
+  {key:"kouri",  label:"小売・飲食・サービス", emoji:"🛍️", tags:[]},
+  {key:"seizo",  label:"製造・その他",     emoji:"🏭",   tags:[]},
+];
+let selectedBiz = null;
+let osusumeFilter = "all";   // "all" | "open"
+const OSUSUME_OPEN = ["募集中","締切間近","通年など"];
+
+function buildBiz(){
+  const g=document.getElementById("bizGrid");
+  業態一覧.forEach(b=>{
+    const btn=document.createElement("button"); btn.className="biz"; btn.dataset.key=b.key;
+    btn.innerHTML=`<span class="emoji">${b.emoji}</span>${esc(b.label)}`;
+    btn.onclick=()=>{ selectBiz(b.key); };
+    g.appendChild(btn);
+  });
+}
+function selectBiz(key){
+  selectedBiz=key;
+  osusumeFilter="all";
+  document.querySelectorAll(".biz").forEach(x=>x.classList.toggle("on", x.dataset.key===key));
+  document.getElementById("osusumeHint").classList.add("hidden");
+  renderOsusume();
+}
+function setOsusumeFilter(f){ osusumeFilter=f; renderOsusume(); }
+function scrollToOsusumeTax(){ const e=document.getElementById("osusumeZeiHead"); if(e) e.scrollIntoView({behavior:"smooth", block:"start"}); }
+function matchTags(itemTags, bizTags){
+  return (itemTags||[]).some(t=>bizTags.includes(t));
+}
+function renderOsusume(){
+  const biz = 業態一覧.find(b=>b.key===selectedBiz); if(!biz) return;
+  const box=document.getElementById("osusumeResult"); box.innerHTML="";
+
+  // 補助金を「業種向け(fit)」「全業種(all)」に分類
+  const fit=[], all=[];
+  補助金.forEach(it=>{
+    const tags=it.業種タグ||[];
+    const isFit = biz.tags.length && matchTags(tags, biz.tags);
+    const isAll = tags.includes("中小企業全般");
+    if(isFit) fit.push(it);
+    else if(isAll) all.push(it);
+  });
+  const byStatusThenDeadline=(a,b)=>{
+    const rank=s=>({"締切間近":0,"募集中":1,"通年など":1,"準備中":2,"終了":3}[statusOf(s)]??2);
+    const r=rank(a)-rank(b); return r!==0?r:deadlineSortKey(a)-deadlineSortKey(b);
+  };
+  fit.sort(byStatusThenDeadline); all.sort(byStatusThenDeadline);
+
+  // 関連する税制改正
+  const zei = 税制.filter(it=>{
+    const tags=it["対象業種・対象者"]||[];
+    return tags.includes("中小企業全般") || (biz.tags.length && matchTags(tags,biz.tags))
+      || tags.some(t=>biz.tags.some(bt=>String(t).includes(bt.split("・")[0])));
+  });
+
+  const total = fit.length + all.length;
+  const openCnt = [...fit,...all].filter(x=>OSUSUME_OPEN.includes(statusOf(x))).length;
+
+  // 「今すぐ申請可」チップ選択時の表示絞り込み
+  const flt = it => osusumeFilter!=="open" || OSUSUME_OPEN.includes(statusOf(it));
+  const dFit = fit.filter(flt), dAll = all.filter(flt);
+
+  box.innerHTML =
+    `<div class="resulthead">「<span class="hl">${esc(biz.label)}</span>」のあなたが使える可能性がある制度</div>`+
+    `<div class="summary">`+
+      `<div class="stat clickable ${osusumeFilter==='all'?'active':''}" onclick="setOsusumeFilter('all')"><b>${total}</b>補助金の候補</div>`+
+      `<div class="stat clickable ${osusumeFilter==='open'?'active':''}" onclick="setOsusumeFilter('open')"><b>${openCnt}</b>今すぐ申請可</div>`+
+      `<div class="stat clickable" onclick="scrollToOsusumeTax()"><b>${zei.length}</b>関係しうる税制改正</div>`+
+    `</div>`+
+    (osusumeFilter==='open'
+      ? `<div class="grouplabel">「今すぐ申請可（募集中・随時）」だけを表示中 — <a href="javascript:void(0)" onclick="setOsusumeFilter('all')">すべて表示に戻す</a></div>`
+      : "")+
+    `<div class="note">⚠ ここに出るのは「使える<b>可能性</b>」の目安です。実際に対象かどうか・要件・締切は、各カードの🔗出典（公式ページ）と税理士等で必ずご確認ください。</div>`;
+
+  if(dFit.length){
+    const h=document.createElement("div"); h.className="grouplabel"; h.textContent=`この業種に特に関係する補助金（${dFit.length}件）`;
+    box.appendChild(h);
+    const g=document.createElement("div"); g.className="grid";
+    dFit.forEach(it=>g.appendChild(cardH(it,"fit"))); box.appendChild(g);
+  }
+  if(dAll.length){
+    const h=document.createElement("div"); h.className="grouplabel"; h.textContent=`業種を問わず使える補助金（${dAll.length}件）`;
+    box.appendChild(h);
+    const g=document.createElement("div"); g.className="grid";
+    dAll.forEach(it=>g.appendChild(cardH(it,"all"))); box.appendChild(g);
+  }
+  if(!dFit.length && !dAll.length){
+    const e=document.createElement("div"); e.className="empty";
+    e.textContent = total
+      ? "「今すぐ申請可」のものはありません（準備中・締切間近を含む全件は『補助金の候補』で見られます）。"
+      : "この業種で該当する補助金がまだ登録されていません。";
+    box.appendChild(e);
+  }
+  if(zei.length){
+    const h=document.createElement("div"); h.className="grouplabel"; h.id="osusumeZeiHead"; h.textContent=`知っておきたい税制改正（${zei.length}件）`;
+    box.appendChild(h);
+    const g=document.createElement("div"); g.className="grid";
+    zei.sort((a,b)=>({"大":0,"中":1,"小":2}[a.影響度]??3)-({"大":0,"中":1,"小":2}[b.影響度]??3));
+    zei.forEach(it=>g.appendChild(cardZ(it))); box.appendChild(g);
+  }
+}
+
+/* ================= 補助金一覧タブ ================= */
+const stateH = { tags:new Set(), status:new Set() };
+function buildFiltersH(){
+  const tf=document.getElementById("tagFiltersH");
+  業種一覧.forEach(t=>{
+    const b=document.createElement("button"); b.className="fbtn"; b.textContent=t;
+    b.onclick=()=>{ stateH.tags.has(t)?stateH.tags.delete(t):stateH.tags.add(t); b.classList.toggle("on"); renderH(); };
+    tf.appendChild(b);
+  });
+  const sf=document.getElementById("statusFiltersH");
+  ["募集中","締切間近","通年など","準備中","終了"].forEach(s=>{
+    const b=document.createElement("button"); b.className="fbtn"; b.textContent=s;
+    b.onclick=()=>{ stateH.status.has(s)?stateH.status.delete(s):stateH.status.add(s); b.classList.toggle("on"); renderH(); };
+    sf.appendChild(b);
+  });
+}
+/* 集計チップ → 状態フィルタに変換 */
+const presetMapH = { all:[], open:["募集中","通年など"], soon:["締切間近"], wait:["準備中"] };
+function pickH(kind){
+  setStatusFilterH(new Set(presetMapH[kind]||[]));
+  document.getElementById("searchH").value = "";
+  document.getElementById("tab-hojokin").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+function setStatusFilterH(set){
+  stateH.status = set;
+  document.querySelectorAll("#statusFiltersH .fbtn").forEach(b=>
+    b.classList.toggle("on", stateH.status.has(b.textContent)));
+  renderH();
+}
+function presetOfH(){
+  const s=[...stateH.status].sort().join(",");
+  if(s==="") return "all";
+  if(s==="募集中,通年など"||s==="通年など,募集中") return "open";
+  if(s==="締切間近") return "soon";
+  if(s==="準備中") return "wait";
+  return "";
+}
+function renderH(){
+  const q=(document.getElementById("searchH").value||"").trim().toLowerCase();
+  const sort=document.getElementById("sortH").value;
+  let items = 補助金.filter(it=>{
+    if(stateH.tags.size && !(it.業種タグ||[]).some(t=>stateH.tags.has(t))) return false;
+    if(stateH.status.size && !stateH.status.has(statusOf(it))) return false;
+    if(q){
+      const hay=[it.名称,it.概要,it.実施機関,(it["対象・要件"]||[]).join(" "),it.備考].join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  items.sort((a,b)=>{
+    if(sort==="name") return String(a.名称).localeCompare(b.名称,"ja");
+    if(sort==="new")  return String(b.取得日||"").localeCompare(String(a.取得日||""));
+    return deadlineSortKey(a)-deadlineSortKey(b);
+  });
+  const cnt = s => 補助金.filter(x=>statusOf(x)===s).length;
+  const p = presetOfH();
+  document.getElementById("summaryH").innerHTML =
+    `<div class="stat clickable ${p==='all'?'active':''}" onclick="pickH('all')"><b>${補助金.length}</b>すべて</div>`+
+    `<div class="stat clickable ${p==='open'?'active':''}" onclick="pickH('open')"><b>${cnt("募集中")+cnt("通年など")}</b>募集中・随時</div>`+
+    `<div class="stat clickable ${p==='soon'?'active':''}" onclick="pickH('soon')"><b>${cnt("締切間近")}</b>締切間近(30日以内)</div>`+
+    `<div class="stat clickable ${p==='wait'?'active':''}" onclick="pickH('wait')"><b>${cnt("準備中")}</b>次回公募待ち</div>`;
+  const list=document.getElementById("listH"); list.innerHTML="";
+  document.getElementById("emptyH").classList.toggle("hidden", items.length>0);
+  items.forEach(it=>list.appendChild(cardH(it)));
+}
+
+/* ================= 税制改正タブ ================= */
+const stateZ = { tags:new Set() };
+function buildFiltersZ(){
+  const years=[...new Set(税制.map(x=>x.改正年度).filter(Boolean))];
+  const ys=document.getElementById("yearZ"); years.forEach(y=>ys.add(new Option(y,y)));
+  const kubun=[...new Set(税制.map(x=>x.区分).filter(Boolean))];
+  const ks=document.getElementById("kubunZ"); kubun.forEach(k=>ks.add(new Option(k,k)));
+  const tf=document.getElementById("tagFiltersZ");
+  業種一覧.forEach(t=>{
+    const b=document.createElement("button"); b.className="fbtn"; b.textContent=t;
+    b.onclick=()=>{ stateZ.tags.has(t)?stateZ.tags.delete(t):stateZ.tags.add(t); b.classList.toggle("on"); renderZ(); };
+    tf.appendChild(b);
+  });
+}
+function renderZ(){
+  const q=(document.getElementById("searchZ").value||"").trim().toLowerCase();
+  const year=document.getElementById("yearZ").value;
+  const kubun=document.getElementById("kubunZ").value;
+  const imp=document.getElementById("impZ").value;
+  let items=税制.filter(it=>{
+    if(year && it.改正年度!==year) return false;
+    if(kubun && it.区分!==kubun) return false;
+    if(imp && it.影響度!==imp) return false;
+    if(stateZ.tags.size && !(it["対象業種・対象者"]||[]).some(t=>stateZ.tags.has(t))) return false;
+    if(q){
+      const hay=[it.制度名,it.概要,(it.要点||[]).join(" "),(it["対象業種・対象者"]||[]).join(" ")].join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const impOrder={"大":0,"中":1,"小":2};
+  items.sort((a,b)=>(impOrder[a.影響度]??3)-(impOrder[b.影響度]??3));
+  const list=document.getElementById("listZ"); list.innerHTML="";
+  document.getElementById("emptyZ").classList.toggle("hidden", items.length>0);
+  items.forEach(it=>list.appendChild(cardZ(it)));
+}
+
+/* ================= 新着タブ ================= */
+function renderShinchaku(){
+  const newH = 補助金.filter(isNew);
+  const newZ = 税制.filter(isNew);
+  document.getElementById("cntNew").textContent = "("+(newH.length+newZ.length)+")";
+  const lead = document.getElementById("shinchakuLead");
+  const box  = document.getElementById("shinchakuBody"); box.innerHTML="";
+
+  if(!newH.length && !newZ.length){
+    lead.textContent = `最終更新（${メタ.最終更新||"—"}）で新たに追加された制度はありません。`;
+    const e=document.createElement("div"); e.className="empty";
+    e.innerHTML = "初回データのため、まだ「新着」はありません。<br>次回以降の自動更新で新しく追加された補助金・税制改正が、ここにまとまって表示されます。";
+    box.appendChild(e);
+    return;
+  }
+  lead.innerHTML = `<b>${esc(メタ.最終更新)}</b> の更新で新たに追加 — 補助金 ${newH.length}件／税制改正 ${newZ.length}件`;
+  if(newH.length){
+    const h=document.createElement("div"); h.className="grouplabel"; h.textContent=`新しく追加された補助金（${newH.length}件）`;
+    box.appendChild(h);
+    const g=document.createElement("div"); g.className="grid";
+    newH.forEach(it=>g.appendChild(cardH(it))); box.appendChild(g);
+  }
+  if(newZ.length){
+    const h=document.createElement("div"); h.className="grouplabel"; h.textContent=`新しく追加された税制改正（${newZ.length}件）`;
+    box.appendChild(h);
+    const g=document.createElement("div"); g.className="grid";
+    newZ.forEach(it=>g.appendChild(cardZ(it))); box.appendChild(g);
+  }
+}
+
+/* ---------- 初期化 ---------- */
+document.getElementById("lastUpdate").textContent = メタ.最終更新 || "—";
+document.getElementById("nextUpdate").textContent = メタ.次回更新予定 || "—";
+document.getElementById("note").textContent = "⚠ " + (メタ.注記 || "この一覧は早わかり用です。申請・判断の前に必ず出典（公式サイト）と専門家でご確認ください。");
+document.getElementById("cntH").textContent = "("+補助金.length+")";
+document.getElementById("cntZ").textContent = "("+税制.length+")";
+buildBiz(); buildFiltersH(); buildFiltersZ(); renderH(); renderZ(); renderShinchaku();
+</script>
+</body>
+</html>
